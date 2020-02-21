@@ -42,20 +42,22 @@ def initialState(row, col, pieces):
             gameState.p2.append((i,j))
     return gameState
 
-def transition(currentState, move, initial_pos, actually_change):
+def transition(currentState, move, initial_pos):
     newState = copy.deepcopy(currentState)
-    if newState.turn == 1:
-        if actually_change:
-            newState.turn = 2
-            newState.opponent = 1
+    if currentState.turn == 1:
+        if move in newState.p2:
+            newState.p2.remove(move)
+        newState.turn = 2
+        newState.opponent = 1
         newState.p1.remove(initial_pos)
         newState.p1.append(move)
-    else:
-        if actually_change:
-            newState.turn = 1
-            newState.opponent = 2
+    else: 
+        if move in newState.p1:
+            newState.p1.remove(move)
+        newState.turn = 1
+        newState.opponent = 2
         newState.p2.remove(initial_pos)
-        newState.p2.append(move)
+        newState.p2.append(move)        
     return newState
     
 def p1_oneMoveGenerator(position, boardsize):
@@ -133,7 +135,7 @@ def evasiveUtility(currentState):
         remaining = len(currentState.p1)
     else:
         remaining = len(currentState.p2)
-    evasive = remaining + random.randrange(0,1)
+    evasive = remaining + random.random()
     return evasive
 
 def conquerorUtility(currentState):
@@ -141,16 +143,19 @@ def conquerorUtility(currentState):
         remaining = len(currentState.p2)
     else:
         remaining = len(currentState.p1)
-    conqueror = (0-remaining) + random.randrange(0,1)
+    conqueror = (0-remaining) + random.random()
     return conqueror
 
 def minimax(currentState):
+    utility_l3 =[]
+    utility_l2 =[]
+    utility_l1 =[]
     allMoves = moveGenerator(currentState) #list of list of tuples [ [(,),(,)], ...]
-    tree = []
+    tree = [] #possible moves as Nodes of p1's current state
     found = False
-    print(allMoves)
-    print("____________________")
-    for i in allMoves: #starting to branch 1 depth from root
+    # print(allMoves)
+    # print("____________________")
+    for i in allMoves: #making nodes for initial state of current player
         found = False
         for node in tree:
             if i[0] == node.position:
@@ -161,19 +166,17 @@ def minimax(currentState):
             newNode.position = i[0]
             newNode.child.append(i[1])
             newNode.state = copy.deepcopy(currentState)
+            newNode.utility = 0
             tree.append(newNode)
-    mini = []
-    maxi = []
-    level1 = []
+
+    opponent_moves = []
     for i in tree: #1st moves of current player
         for c in i.child:
             newNode = Node() #populate node
             newNode.position = c
-            newNode.parent = i.position #link them to tree
-            newNode.state = transition(i.state,newNode.position ,i.position, False) #hypothetically moving
-            allMoves = moveGenerator(newNode.state) #See possible moves of current position
-            for m in allMoves:
-                newNode.child.append(m[1]) #Add possible moves to child
+            newNode.parent = i #link them to tree
+            newNode.state = transition(i.state,newNode.position ,i.position) #moving
+            newNode.utility = float("inf")
             # if child move is going to eat opponent's pawn
             if i.state.opponent == 1: 
                 if c in i.state.p1:
@@ -181,39 +184,44 @@ def minimax(currentState):
             else:
                 if c in i.state.p2:
                     newNode.state.p2.remove(c)
-            #try changing turns
-            op = newNode.state.opponent
-            newNode.state.opponent = newNode.state.turn
-            newNode.state.turn = op 
-            allMoves = moveGenerator(newNode.state) #possible moves of opponent's next turn
-
-            # for move in allMoves:
-            #     nextPlayer = Node()
-            #     nextPlayer.parent = move[0]
-            #     nextPlayer.position = move[1]
-            #     nextPlayer.state = transition(newNode.state, move[1],move[0], True) #actually moves
-            #     nextLevelAllMoves = moveGenerator(nextPlayer.state)
-
-
-                
-
-            # print("new node and its possible moves")
-            # print(newNode.position,allMoves)
-            # print("______________")
-            
-
-            
-
+            allMoves = moveGenerator(newNode.state) #See possible moves of opponent
+            #print(allMoves)
+            state = copy.deepcopy(newNode.state)
+            for m in allMoves: #populate nodes of possible moves of opponent
+                newNode.child.append(m[1]) #Add possible moves to child
+                n = Node()
+                n.parent = newNode
+                n.position = m[1]
+                n.state = state
+                n.state = transition(state,m[1],m[0])
+                n.utility = 0
+                opponent_moves.append(n) #Add list of opponent's moves to a new list
+    for i in opponent_moves:
+        allMoves = moveGenerator(i.state)
+        state = copy.deepcopy(i.state)
+        l3 = []
+        for move in allMoves:
+            newNode = Node()
+            newNode.position = move[1]
+            newNode.parent = move[0]
+            newNode.state = transition(state,move[1],move[0])
+            newNode.utility = evasiveUtility(newNode.state) #utility of current player after 3 steps
+            l3.append(newNode.utility)
+        i.utility = max(l3) #utility of next player
+        i.parent.utility = min(i.parent.utility,i.utility) #utility of current player first move
+        i.parent.parent.utility = max(i.parent.parent.utility,i.parent.utility) #final utility of each position of current player
+        if max(i.parent.parent.utility,i.parent.utility) == i.parent.utility:
+            i.parent.parent.action = i.parent.position
     
-            
-
-
-
-
-
-    
-
-        
+    initial_pos = tree[0].position
+    final_pos = tree[0].action
+    util = tree[0].utility
+    for i in tree:
+        if i.utility > util:
+            util = i.utility
+            initial_pos = i.position
+            final_pos = i.action
+    return(util, initial_pos, final_pos)
 
 def playgame(h_white, h_black, gamestate):
     win, winner = isGameOver(gamestate)
@@ -224,11 +232,11 @@ def playgame(h_white, h_black, gamestate):
 gs = initialState(10,2,1)
 displayState(gs)
 
-print("All Moves")
-print(moveGenerator(gs))
-print("___________")
-print("Game Over?")
-print(isGameOver(gs))
-print("_____________")
+# print("All Moves")
+# print(moveGenerator(gs))
+# print("___________")
+# print("Game Over?")
+# print(isGameOver(gs))
+# print("_____________")
 print("minmax")
 minimax(gs)
