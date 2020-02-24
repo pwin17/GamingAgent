@@ -2,10 +2,10 @@ import copy
 import random 
 
 #COEFFICIENT FOR CUSTOMIZED UTILITY
-PAWN_COEFFICIENT = 5 # points per pawn
-ROW_COEFFICIENT = 20 # points for expanding forward
+PAWN_COEFFICIENT = 2 # points per pawn
+ROW_COEFFICIENT = 2 # points for expanding forward
 FAKE_INFINITY = 9999 
-SUPPORT_COEFFICIENT = 2 
+SUPPORT_COEFFICIENT = 1 
 
 """
 Representation & convention
@@ -56,7 +56,6 @@ def displayState(currentState):
             else:
                 x = x + "."
         print(x)
-    print('_____________________')
 
 def initialState(num_row, num_col, num_row_pieces):
     """Create initial board state with board size row x col and row_pieces rows of pawns for each side"""
@@ -180,7 +179,7 @@ def conquerorUtility(currentState, player):
         opp_remaining = len(currentState.p1)
     return random.random() - opp_remaining
 
-def nhatUtility(currentState, player):
+def heightisgoalUtility(currentState, player):
     utility = 0 
     if player == 1:
         utility += len(currentState.p1)*PAWN_COEFFICIENT #remaining
@@ -188,7 +187,7 @@ def nhatUtility(currentState, player):
         for (row_pos, col_pos) in currentState.p1:
             if row_pos == currentState.boardSize[0]-1:
                 utility += FAKE_INFINITY
-            utility += row_pos*ROW_COEFFICIENT 
+            utility += row_pos**2*ROW_COEFFICIENT 
             if (row_pos+1, col_pos+1) in currentState.p1:
                 utility += SUPPORT_COEFFICIENT
             if (row_pos+1, col_pos-1) in currentState.p1:
@@ -196,14 +195,14 @@ def nhatUtility(currentState, player):
         for (row_pos, col_pos) in currentState.p2:
             if row_pos == 0:
                 utility -= FAKE_INFINITY
-            utility -= (currentState.boardSize[0]-1-row_pos)*ROW_COEFFICIENT
+            utility -= (currentState.boardSize[0]-1-row_pos)**2*ROW_COEFFICIENT
     elif player ==2:
         utility += len(currentState.p2)*PAWN_COEFFICIENT #remaining
         utility -= len (currentState.p1)*PAWN_COEFFICIENT #opp remaining
         for (row_pos, col_pos) in currentState.p2:
             if row_pos == 0:
                 utility += FAKE_INFINITY
-            utility +=(currentState.boardSize[0]-1-row_pos)*ROW_COEFFICIENT 
+            utility +=(currentState.boardSize[0]-1-row_pos)**2*ROW_COEFFICIENT 
             if (row_pos-1, col_pos+1) in currentState.p2:
                 utility += SUPPORT_COEFFICIENT
             if (row_pos-1, col_pos-1) in currentState.p2:
@@ -211,7 +210,7 @@ def nhatUtility(currentState, player):
         for (row_pos, col_pos) in currentState.p1:
             if row_pos == currentState.boardSize[0]-1:
                 utility -= FAKE_INFINITY
-            utility -= row_pos*ROW_COEFFICIENT
+            utility -= row_pos**2*ROW_COEFFICIENT
     
     return utility + random.random()
 
@@ -281,22 +280,34 @@ def minimax(currentState, max_depth, utility_function):
 def playgame(heuristic_p1, heuristic_p2, board_state,max_depth):
     """function to play the game with heuristic for each player"""
     win, winner = isGameOver(board_state)
-    displayState(board_state)
+    print("board size: " + str(board_state.boardSize))
+    print("minimax depth: " + str(max_depth))
+
+    # displayState(board_state)
+    move = 0
     while not win:
         if board_state.turn == 1:
             next_move = minimax(board_state, max_depth, heuristic_p1)
         else:
             next_move = minimax(board_state, max_depth, heuristic_p2)
-        print(next_move)
+        # print(next_move)
         board_state = transition(board_state, next_move[0], next_move[1])
-        displayState(board_state)
+        # displayState(board_state)
+        # print('------------------------')
         win, winner = isGameOver(board_state) 
+        move += 1
+    print("#p1 left: " + str(len(board_state.p1)))
+    print("#p2 left: " + str(len(board_state.p2)))
+    print('total moves: '+ str(move))
+    displayState(board_state)   
+    print(winner +'won')
+    print('___________________')
 
-    # displayState(board_state)   
-    print(win, winner)
 
 
 
 
-start_state = initialState(5,5,1)
-playgame(evasiveUtility,conquerorUtility, start_state,3)
+
+for i in range(5):
+    start_state = initialState(8,8,2)
+    playgame(heightisgoalUtility,evasiveUtility, start_state,3)
