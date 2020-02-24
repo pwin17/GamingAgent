@@ -69,7 +69,7 @@ def initialState(num_row, num_col, num_row_pieces):
     return gameState
 
 def transition(currentState, position_before, position_after):
-        """transition function take in a state and return a new state after a move"""
+    """transition function take in a state and return a new state after a move"""
     newState = copy.deepcopy(currentState)
     if newState.turn == 1:
         newState.turn = 2
@@ -303,7 +303,7 @@ def playgame(heuristic_p1, heuristic_p2, board_state,max_depth):
 for i in range(20):
     # print("\nGame begins")
     start_state = initialState(5,5,1)
-    playgame(evasiveUtility,evasiveUtility, start_state,3)
+    playgame(evasiveUtility,conquerorUtility, start_state,3)
 # for i in moves:
     # print(i)
 # a_win_state = State([(2,0),(0,1),(0,2)],[(2,2)],(3,3),1)
