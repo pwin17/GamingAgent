@@ -196,12 +196,12 @@ def nhatUtility(currentState, player):
 def decideBestUtility(currentState, player):
     #decide which heuristic to use depending on the number of pawns left of the player and that of the opponent
     if player == 1:
-        if len(currentState.p1) > len(currentState.p2):
+        if len(currentState.p1) < len(currentState.p2):
             return conquerorUtility(currentState, player)
         else:
             return evasiveUtility(currentState, player)
     else:
-        if len(currentState.p2) > len(currentState.p1):
+        if len(currentState.p2) < len(currentState.p1):
             return conquerorUtility(currentState, player)
         else:
             return evasiveUtility(currentState, player)
@@ -260,30 +260,46 @@ def minimax(currentState, max_depth, utility_function):
 
 def playgame(heuristic_p1, heuristic_p2, board_state,max_depth):
     win, winner = isGameOver(board_state)
+    p1_moves = 0
+    p2_moves = 0
+    p1_captured_by_p2 = 0
+    p2_captured_by_p1 = 0
     # displayState(board_state)
     while not win:
         if board_state.turn == 1:
             next_move = minimax(board_state, max_depth, heuristic_p1)
+            p1_moves += 1
+            if next_move[1] in board_state.p2:
+                p2_captured_by_p1 += 1 
         else:
             next_move = minimax(board_state, max_depth, heuristic_p2)
+            p2_moves += 1
+            if next_move[1] in board_state.p1:
+                p1_captured_by_p2 += 1 
+
         # print(next_move)
         board_state = transition(board_state, next_move[0], next_move[1])
         # displayState(board_state)
         win, winner = isGameOver(board_state) 
 
-    # displayState(board_state)   
-    print(win, winner)
+    displayState(board_state)
+    print("Number of moves p1 made:", p1_moves)
+    print("Number of moves p2 made:", p2_moves)
+    print("p1 captured %d pawns of p2" % p2_captured_by_p1)
+    print("p2 captured %d pawns of p1" % p1_captured_by_p2)   
+    print("Winner:", winner)
 
 
 
 # board (5,5,1) with evasive utility
-# start_state = initialState(8,8,2)
-# playgame(evasiveUtility,nhatUtility, start_state,3)
+# start_state = initialState(5,5,1)
+# playgame(decideBestUtility,decideBestUtility, start_state,3)
 # moves = moveGenerator(start_state)
-for i in range(20):
+for i in range(8):
     # print("\nGame begins")
-    start_state = initialState(5,5,1)
-    playgame(evasiveUtility,evasiveUtility, start_state,3)
+    start_state = initialState(5,5,2)
+    playgame(decideBestUtility, conquerorUtility, start_state,3)
+    print("\n")
 # for i in moves:
     # print(i)
 # a_win_state = State([(2,0),(0,1),(0,2)],[(2,2)],(3,3),1)
