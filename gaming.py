@@ -1,9 +1,20 @@
 import copy
 import random 
+
+#COEFFICIENT FOR CUSTOMIZED UTILITY
 PAWN_COEFFICIENT = 5 # points per pawn
 ROW_COEFFICIENT = 20 # points for expanding forward
 FAKE_INFINITY = 9999 
-SUPPORT_COEFFICIENT = 2 # 
+SUPPORT_COEFFICIENT = 2 
+
+"""
+Representation & convention
+position: tuples (row position, column position)
+board size: tuples (number of rows, number of columns)
+player: 1, 2
+player 1 always goes first for a new game
+"""
+
 class State:
     """state class for board state representation"""
     def __init__(self, p1, p2, boardSize, turn):
@@ -58,7 +69,7 @@ def initialState(num_row, num_col, num_row_pieces):
     return gameState
 
 def transition(currentState, position_before, position_after):
-    """transition function take in a state and return a new state after a move"""
+        """transition function take in a state and return a new state after a move"""
     newState = copy.deepcopy(currentState)
     if newState.turn == 1:
         newState.turn = 2
@@ -200,6 +211,7 @@ def nhatUtility(currentState, player):
             if row_pos == currentState.boardSize[0]-1:
                 utility -= FAKE_INFINITY
             utility -= row_pos*ROW_COEFFICIENT
+    
     return utility + random.random()
 
             
@@ -216,13 +228,9 @@ def decideBestUtility(currentState, player):
         else:
             return evasiveUtility(currentState, player)
 
-
-
-
-
 def minimax(currentState, max_depth, utility_function):
     """Input: current state of the board, depth for minimax algorithm, utility function
-    Output: the move (whose turn, from position, to position)"""
+    Output: the move (turn, from position, to position)"""
     # player: who is thinking and actually taking the turn at currentState
     player = currentState.turn
     
@@ -239,27 +247,19 @@ def minimax(currentState, max_depth, utility_function):
         # traverse through the leaves of the tree and generate its children
         for parent_node in all_nodes[-1]: 
             # if the game is over then stop expanding
-            over, winner = isGameOver(parent_node.state)
-            if over != True: #game is not over
+            if isGameOver(parent_node.state)[0] != True:
                 possible_moves = moveGenerator(parent_node.state)
                 for move in possible_moves:
-                    #create new child and link it to the parent
                     newState = transition(parent_node.state, move[0], move[1])
                     child_node = Node(newState, parent_node, [], move, 0)
                     parent_node.children.append(child_node)
                     current_level_node_list.append(child_node)
-            else: # game is over
-                if (player == 1 and winner == "p1") or (player ==2 and winner =="p2"):
-                    parent_node.utility == float('inf')
-                else:
-                    parent_node.utility == float('-inf')
         all_nodes.append(current_level_node_list)
     
-    # calculate the utility of all the leaf nodes
+    # calculate the utility of all the leaf nodes:
     for leaf_node in all_nodes[max_depth]:
         leaf_node.utility = utility_function(leaf_node.state, player)
-    
-    # calculate the utility of the upper level nodes
+    # calculate the utility of the upper level nodes:
     for depth in range(max_depth-1, -1, -1): #traverse from the level of the parents of the leaves to root level
         for node in all_nodes[depth]:
             if node.get_turn() == player:
@@ -272,13 +272,13 @@ def minimax(currentState, max_depth, utility_function):
                     node.utility = min([children_node.utility for children_node in node.children])
                 else: 
                     node.utility = float('inf')
-    
     # find and return the best move from the children of the root
     for root_child in rootNode.children:
         if rootNode.utility == root_child.utility:
             return root_child.action
 
 def playgame(heuristic_p1, heuristic_p2, board_state,max_depth):
+    """function to play the game with heuristic for each player"""
     win, winner = isGameOver(board_state)
     # displayState(board_state)
     while not win:
