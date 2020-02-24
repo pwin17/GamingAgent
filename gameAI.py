@@ -1,14 +1,24 @@
 import copy
 import random
+import time
 
 class Node:
-    def __init__(self):
-        self.parent = None 
-        self.position = None
-        self.child = []
-        self.action = None 
-        self.state = None
-        self.utility = None
+    def __init__(self, state, parent, children, action,utility):
+        self.state = state
+        self.parent = parent
+        self.children = children
+        self.action = action 
+        self.utility = utility
+        if parent is None: 
+            self.depth = 0
+        else:
+            self.depth = self.parent.depth + 1
+    def get_p1_positions(self):
+        return self.state.p1
+    def get_p2_positions(self):
+        return self.state.p2
+    def get_turn(self):
+        return self.state.turn
 
 class State:
     def __init__(self, p1, p2, boardSize, turn, opponent):
@@ -146,90 +156,72 @@ def conquerorUtility(currentState):
     conqueror = (0-remaining) + random.random()
     return conqueror
 
-def minimax(currentState):
-    utility_l3 =[]
-    utility_l2 =[]
-    utility_l1 =[]
-    allMoves = moveGenerator(currentState) #list of list of tuples [ [(,),(,)], ...]
-    tree = [] #possible moves as Nodes of p1's current state
-    found = False
-    # print(allMoves)
-    # print("____________________")
-    for i in allMoves: #making nodes for initial state of current player
-        found = False
-        for node in tree:
-            if i[0] == node.position:
-                node.child.append(i[1])
-                found = True
-        if not found:
-            newNode = Node()
-            newNode.position = i[0]
-            newNode.child.append(i[1])
-            newNode.state = copy.deepcopy(currentState)
-            newNode.utility = 0
-            tree.append(newNode)
+def minimax(currentState, max_depth, utility_function):
+    """Input: current state of the board, depth for minimax algorithm, utility function
+    Output: the move (whose turn, from position, to position)"""
 
-    opponent_moves = []
-    for i in tree: #1st moves of current player
-        for c in i.child:
-            newNode = Node() #populate node
-            newNode.position = c
-            newNode.parent = i #link them to tree
-            newNode.state = transition(i.state,newNode.position ,i.position) #moving
-            newNode.utility = float("inf")
-            # if child move is going to eat opponent's pawn
-            if i.state.opponent == 1: 
-                if c in i.state.p1:
-                    newNode.state.p1.remove(c)
-            else:
-                if c in i.state.p2:
-                    newNode.state.p2.remove(c)
-            allMoves = moveGenerator(newNode.state) #See possible moves of opponent
-            #print(allMoves)
-            state = copy.deepcopy(newNode.state)
-            for m in allMoves: #populate nodes of possible moves of opponent
-                newNode.child.append(m[1]) #Add possible moves to child
-                n = Node()
-                n.parent = newNode
-                n.position = m[1]
-                n.state = state
-                n.state = transition(state,m[1],m[0])
-                n.utility = 0
-                opponent_moves.append(n) #Add list of opponent's moves to a new list
-    for i in opponent_moves:
-        allMoves = moveGenerator(i.state)
-        state = copy.deepcopy(i.state)
-        l3 = []
-        for move in allMoves:
-            newNode = Node()
-            newNode.position = move[1]
-            newNode.parent = move[0]
-            newNode.state = transition(state,move[1],move[0])
-            newNode.utility = evasiveUtility(newNode.state) #utility of current player after 3 steps
-            l3.append(newNode.utility)
-        i.utility = max(l3) #utility of next player
-        i.parent.utility = min(i.parent.utility,i.utility) #utility of current player first move
-        i.parent.parent.utility = max(i.parent.parent.utility,i.parent.utility) #final utility of each position of current player
-        if max(i.parent.parent.utility,i.parent.utility) == i.parent.utility:
-            i.parent.parent.action = i.parent.position
+    #create the trees and a list of all nodes
+    #the list of all nodes contains the lists of all nodes in each level of the trees
+    player = currentState.turn
+    rootNode = Node(currentState,None, [], None, 0)
+
+    all_nodes = []
+    all_nodes.append([rootNode])
+    current_depth = 0
+    while current_depth < max_depth:
+        current_level_node_list =[]
+        current_depth +=1 
+        for parent_node in all_nodes[-1]: ###traversing through the leaves of the tree and generate its children
+            if isGameOver(parent_node.state)[0] != True:
+                possible_moves = moveGenerator(parent_node.state)
+                for move in possible_moves:
+                    newState = transition(parent_node.state, move[0], move[1])
+                    child_node = Node(newState, parent_node, [], move, 0)
+                    parent_node.children.append(child_node)
+                    current_level_node_list.append(child_node)
+        all_nodes.append(current_level_node_list)
+    # for i in all_nodes:
+        # print(len(i))
     
-    initial_pos = tree[0].position
-    final_pos = tree[0].action
-    util = tree[0].utility
-    for i in tree:
-        if i.utility > util:
-            util = i.utility
-            initial_pos = i.position
-            final_pos = i.action
-    return(util, initial_pos, final_pos)
+    # calculating the utility of all the leaf nodes:
+    for leaf_node in all_nodes[max_depth]:
+        leaf_node.utility = utility_function(leaf_node.state, player)
+    # calculating the utility of the upper level nodes:
+    for depth in range(max_depth-1, -1, -1): #from level of parents of the leaves to root level
+        for node in all_nodes[depth]:
+            if node.get_turn() == player:
+                if len(node.children) != 0:
+                    node.utility = max([children_node.utility for children_node in node.children])
+                # else: 
+                #     node.utility =float('-inf') # When the player's next move is in the winning state, there will be no leaf nodes
+            else: 
+                if len(node.children) != 0:
+                    node.utility = min([children_node.utility for children_node in node.children])
+                # else: 
+                #     node.utility = float('inf')
+    # find and return the best move from the children of the root
+    for root_child in rootNode.children:
+        if rootNode.utility == root_child.utility:
+            return root_child.action
 
-def playgame(h_white, h_black, gamestate):
-    win, winner = isGameOver(gamestate)
+def playgame(heuristic_p1, heuristic_p2, board_state,max_depth):
+    win, winner = isGameOver(board_state)
+    # displayState(board_state)
     while not win:
-        evasiveUtility(gamestate)
+        if board_state.turn == 1:
+            next_move = minimax(board_state, max_depth, heuristic_p1)
+        else:
+            next_move = minimax(board_state, max_depth, heuristic_p2)
+        # print(next_move)
+        board_state = transition(board_state, next_move[0], next_move[1])
+        # displayState(board_state)
+        win, winner = isGameOver(board_state) 
+
+    # displayState(board_state)   
+    print(win, winner)
 
 
-gs = initialState(10,2,1)
+gs = initialState(8,8,2)
 displayState(gs)
 
 # print("All Moves")
@@ -239,4 +231,7 @@ displayState(gs)
 # print(isGameOver(gs))
 # print("_____________")
 print("minmax")
+s = time.time()
 minimax(gs)
+e = time.time()
+print(e-s)

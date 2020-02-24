@@ -1,18 +1,9 @@
 import copy
 import random 
-
-#COEFFICIENT FOR CUSTOMIZED UTILITY
-PAWN_COEFFICIENT = 5
-ROW_COEFFICIENT = 20
-FAKE_INFINITY = 9999
-SUPPORT_COEFFICIENT = 2
-
-"""
-position: tuples (row position, column position)
-board size: tuples (number of rows, number of columns)
-player: 1, 2
-player 1 always goes first for a new game
-"""
+PAWN_COEFFICIENT = 5 # points per pawn
+ROW_COEFFICIENT = 20 # points for expanding forward
+FAKE_INFINITY = 9999 
+SUPPORT_COEFFICIENT = 2 # 
 class State:
     """state class for board state representation"""
     def __init__(self, p1, p2, boardSize, turn):
@@ -211,6 +202,24 @@ def nhatUtility(currentState, player):
             utility -= row_pos*ROW_COEFFICIENT
     return utility + random.random()
 
+            
+def decideBestUtility(currentState, player):
+    #decide which heuristic to use depending on the number of pawns left of the player and that of the opponent
+    if player == 1:
+        if len(currentState.p1) > len(currentState.p2):
+            return conquerorUtility(currentState, player)
+        else:
+            return evasiveUtility(currentState, player)
+    else:
+        if len(currentState.p2) > len(currentState.p1):
+            return conquerorUtility(currentState, player)
+        else:
+            return evasiveUtility(currentState, player)
+
+
+
+
+
 def minimax(currentState, max_depth, utility_function):
     """Input: current state of the board, depth for minimax algorithm, utility function
     Output: the move (whose turn, from position, to position)"""
@@ -257,7 +266,7 @@ def minimax(currentState, max_depth, utility_function):
                 if len(node.children) != 0:
                     node.utility = max([children_node.utility for children_node in node.children])
                 else: 
-                    node.utility =float('-inf') 
+                    node.utility =float('-inf') # When the player's next move is in the winning state, there will be no leaf nodes
             else: 
                 if len(node.children) != 0:
                     node.utility = min([children_node.utility for children_node in node.children])
@@ -280,18 +289,21 @@ def playgame(heuristic_p1, heuristic_p2, board_state,max_depth):
         # print(next_move)
         board_state = transition(board_state, next_move[0], next_move[1])
         # displayState(board_state)
-        win, winner = isGameOver(board_state)
-    
+        win, winner = isGameOver(board_state) 
+
+    # displayState(board_state)   
     print(win, winner)
 
 
 
 # board (5,5,1) with evasive utility
-# start_state = initialState(5,5,1)
+# start_state = initialState(8,8,2)
+# playgame(evasiveUtility,nhatUtility, start_state,3)
 # moves = moveGenerator(start_state)
-for i in range(10):
-    start_state = initialState(8,8,2)
-    playgame(evasiveUtility,nhatUtility, start_state,3)
+for i in range(20):
+    # print("\nGame begins")
+    start_state = initialState(5,5,1)
+    playgame(evasiveUtility,evasiveUtility, start_state,3)
 # for i in moves:
     # print(i)
 # a_win_state = State([(2,0),(0,1),(0,2)],[(2,2)],(3,3),1)
