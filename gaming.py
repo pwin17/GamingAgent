@@ -56,6 +56,7 @@ def displayState(currentState):
             else:
                 x = x + "."
         print(x)
+    print('_____________________')
 
 def initialState(num_row, num_col, num_row_pieces):
     """Create initial board state with board size row x col and row_pieces rows of pawns for each side"""
@@ -280,15 +281,15 @@ def minimax(currentState, max_depth, utility_function):
 def playgame(heuristic_p1, heuristic_p2, board_state,max_depth):
     """function to play the game with heuristic for each player"""
     win, winner = isGameOver(board_state)
-    # displayState(board_state)
+    displayState(board_state)
     while not win:
         if board_state.turn == 1:
             next_move = minimax(board_state, max_depth, heuristic_p1)
         else:
             next_move = minimax(board_state, max_depth, heuristic_p2)
-        # print(next_move)
+        print(next_move)
         board_state = transition(board_state, next_move[0], next_move[1])
-        # displayState(board_state)
+        displayState(board_state)
         win, winner = isGameOver(board_state) 
 
     # displayState(board_state)   
@@ -296,20 +297,6 @@ def playgame(heuristic_p1, heuristic_p2, board_state,max_depth):
 
 
 
-# board (5,5,1) with evasive utility
-# start_state = initialState(8,8,2)
-# playgame(evasiveUtility,nhatUtility, start_state,3)
-# moves = moveGenerator(start_state)
-for i in range(20):
-    # print("\nGame begins")
-    start_state = initialState(5,5,1)
-    playgame(evasiveUtility,conquerorUtility, start_state,3)
-# for i in moves:
-    # print(i)
-# a_win_state = State([(2,0),(0,1),(0,2)],[(2,2)],(3,3),1)
-# print(isGameOver(a_win_state))
-# print(move)
-    # print(len(i))
-# displayState(gs)
-# print(moveGenerator(gs))
-# print(isGameOver(gs))
+
+start_state = initialState(5,5,1)
+playgame(evasiveUtility,conquerorUtility, start_state,3)
