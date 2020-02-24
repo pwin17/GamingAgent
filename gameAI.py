@@ -226,7 +226,7 @@ def minimax(currentState):
 def playgame(h_white, h_black, gamestate):
     win, winner = isGameOver(gamestate)
     while not win:
-         evasiveUtility(gamestate)
+        evasiveUtility(gamestate)
 
 
 gs = initialState(10,2,1)
